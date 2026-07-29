@@ -1,0 +1,60 @@
+services:
+  robotis_omy:
+    image: robotis/open-manipulator:5.0.0
+    container_name: robotis_omy_loren
+
+    network_mode: host
+    ipc: host
+    privileged: true
+    stdin_open: true
+    tty: true
+
+    environment:
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
+      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"]'
+      DISPLAY: ${DISPLAY}
+      QT_X11_NO_MITSHM: "1"
+
+    volumes:
+      - /dev:/dev
+      - /dev/shm:/dev/shm
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../../open_manipulator:/root/omy_irasc/open_manipulator:ro
+
+    command: sleep infinity
+
+    restart: unless-stopped
+
+  irasc_omy_stack:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+
+    image: omy-irasc-stack:latest
+    container_name: irasc_stack
+
+    network_mode: host
+    ipc: host
+    privileged: true
+    stdin_open: true
+    tty: true
+
+    environment:
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
+      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"]'
+      DISPLAY: ${DISPLAY}
+      QT_X11_NO_MITSHM: "1"
+
+    volumes:
+      - /dev:/dev
+      - /dev/shm:/dev/shm
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../src:/root/irasc_ws/src
+      - ../config:/root/irasc_ws/config
+      - ../scripts:/root/irasc_ws/scripts
+
+    command: sleep infinity
+
+    restart: unless-stopped

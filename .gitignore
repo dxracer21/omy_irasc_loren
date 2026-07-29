@@ -1,0 +1,23 @@
+# Local environment
+.env
+
+# ROS 2 build files
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+
+# Docker/runtime files
+*.pid
+*.log
