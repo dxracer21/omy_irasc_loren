@@ -21,3 +21,6 @@ __pycache__/
 # Docker/runtime files
 *.pid
 *.log
+
+# Runtime data and model/cache artifacts
+data/

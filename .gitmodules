@@ -1,3 +1,6 @@
 [submodule "open_manipulator"]
 	path = open_manipulator
 	url = https://github.com/ROBOTIS-GIT/open_manipulator.git
+[submodule "cyclo_intelligence"]
+	path = cyclo_intelligence
+	url = https://github.com/ROBOTIS-GIT/cyclo_intelligence.git

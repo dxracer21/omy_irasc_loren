@@ -58,3 +58,199 @@ services:
     command: sleep infinity
 
     restart: unless-stopped
+
+  cyclo_loren:
+    container_name: cyclo_loren
+    image: ${CYCLO_INTELLIGENCE_IMAGE:-robotis/cyclo-intelligence:1.2.0}
+
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio: 99
+      rttime: -1
+      memlock: 8428281856
+
+    network_mode: host
+    ipc: host
+    privileged: true
+    stdin_open: true
+    tty: true
+    runtime: nvidia
+
+    environment:
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
+      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"]'
+      DISPLAY: ${DISPLAY}
+      QT_X11_NO_MITSHM: "1"
+      CYCLO_UI_PORT: ${CYCLO_UI_PORT:-7080}
+      CYCLO_ROSBRIDGE_PORT: ${CYCLO_ROSBRIDGE_PORT:-7090}
+      CYCLO_VIDEO_SERVER_PORT: ${CYCLO_VIDEO_SERVER_PORT:-7082}
+      CYCLO_WEB_VIDEO_SERVER_PORT: ${CYCLO_WEB_VIDEO_SERVER_PORT:-7085}
+      CYCLO_SUPERVISOR_API_PORT: ${CYCLO_SUPERVISOR_API_PORT:-7100}
+      INFERENCE_LOAD_TIMEOUT_SEC: ${INFERENCE_LOAD_TIMEOUT_SEC:-7200}
+      PYTHONUNBUFFERED: "1"
+
+    volumes:
+      - /dev:/dev
+      - /dev/shm:/dev/shm
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../../data/cyclo/workspace:/workspace
+      - ../../data/cyclo/huggingface:/root/.cache/huggingface
+      - ../../cyclo_intelligence:/root/ros2_ws/src/cyclo_intelligence
+      - ../../cyclo_intelligence/docker/s6-services/common/ros2_service_run.sh:/usr/local/lib/s6-services/ros2_service_run.sh:ro
+      - ../config/cyclo/bashrc:/root/.bashrc:ro
+      - ../../cyclo_intelligence/shared/shared/robot_configs/urdf:/usr/share/nginx/html/urdf/urdf:ro
+      - ../../cyclo_intelligence/shared/shared/robot_configs/ffw_description:/usr/share/nginx/html/urdf/ffw_description:ro
+      - ../../cyclo_intelligence/shared/shared/robot_configs/open_manipulator_description:/usr/share/nginx/html/urdf/open_manipulator_description:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../../cyclo_intelligence/docker/supervisor_api:/opt/supervisor_api:ro
+      - ../../data/cyclo/agent_sockets:/var/run/agent
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "S6_SVSTAT=$$(ls /package/admin/s6-*/command/s6-svstat 2>/dev/null | head -1); [ -n \"$$S6_SVSTAT\" ] && \"$$S6_SVSTAT\" /run/service/nginx | grep -q up && \"$$S6_SVSTAT\" /run/service/supervisor_api | grep -q up && \"$$S6_SVSTAT\" /run/service/s6-agent | grep -q up",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+  lerobot:
+    profiles: ["cyclo-policy"]
+    container_name: lerobot_server
+    image: ${LEROBOT_IMAGE:-robotis/lerobot-zenoh:1.3.2-amd64}
+
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio: 99
+      rttime: -1
+      memlock: 8428281856
+
+    network_mode: host
+    ipc: host
+    privileged: true
+    runtime: nvidia
+
+    environment:
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
+      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"]'
+      LOAD_POLICY_TIMEOUT_S: ${LOAD_POLICY_TIMEOUT_S:-7200}
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+      PYTHONUNBUFFERED: "1"
+
+    volumes:
+      - /dev:/dev
+      - /dev/shm:/dev/shm
+      - ../../data/cyclo/workspace:/workspace
+      - ../../data/cyclo/huggingface:/root/.cache/huggingface
+      - ../../cyclo_intelligence/cyclo_brain/sdk/zenoh_ros2_sdk:/zenoh_sdk:ro
+      - ../../cyclo_intelligence/cyclo_brain/sdk/robot_client:/robot_client_sdk:ro
+      - ../../cyclo_intelligence/cyclo_brain/sdk/action_chunk_processing:/action_chunk_processing_sdk:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/common/runtime:/policy_runtime:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/common/s6-services/main-runtime:/etc/s6-overlay/s6-rc.d/main-runtime:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/common/s6-services/engine-process:/etc/s6-overlay/s6-rc.d/engine-process:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/common/s6-services/user/contents.d:/etc/s6-overlay/s6-rc.d/user/contents.d:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/lerobot/lerobot_engine:/app/lerobot_engine:ro
+      - ../../data/cyclo/zenoh_cache:/root/.cache/zenoh_ros2_sdk:rw
+      - ../../cyclo_intelligence/shared/shared/robot_configs:/orchestrator_config:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+    restart: "no"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "S6_SVSTAT=$$(ls /package/admin/s6-*/command/s6-svstat 2>/dev/null | head -1); [ -n \"$$S6_SVSTAT\" ] && \"$$S6_SVSTAT\" /run/service/main-runtime | grep -q '^up ' && \"$$S6_SVSTAT\" /run/service/engine-process | grep -q '^up '",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+  groot:
+    profiles: ["cyclo-policy"]
+    container_name: groot_server
+    image: ${GROOT_IMAGE:-robotis/groot-zenoh:1.3.4-amd64}
+
+    cap_add:
+      - SYS_NICE
+    ulimits:
+      rtprio: 99
+      rttime: -1
+      memlock: 8428281856
+
+    network_mode: host
+    ipc: host
+    privileged: true
+    runtime: nvidia
+
+    environment:
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
+      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"]'
+      LOAD_POLICY_TIMEOUT_S: ${LOAD_POLICY_TIMEOUT_S:-7200}
+      CMD_VEL_LINEAR_DEADBAND: 0.02
+      CMD_VEL_ANGULAR_DEADBAND: 0.02
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
+      PYTHONUNBUFFERED: "1"
+
+    volumes:
+      - /dev:/dev
+      - /dev/shm:/dev/shm
+      - ../../data/cyclo/workspace:/workspace
+      - ../../data/cyclo/huggingface:/root/.cache/huggingface
+      - ../../cyclo_intelligence/cyclo_brain/sdk/zenoh_ros2_sdk:/zenoh_sdk:ro
+      - ../../cyclo_intelligence/cyclo_brain/sdk/robot_client:/robot_client_sdk:ro
+      - ../../cyclo_intelligence/cyclo_brain/sdk/action_chunk_processing:/action_chunk_processing_sdk:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/common/runtime:/policy_runtime:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/groot/s6-services/main-runtime:/etc/s6-overlay/s6-rc.d/main-runtime:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/groot/s6-services/engine-process:/etc/s6-overlay/s6-rc.d/engine-process:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/groot/s6-services/user/contents.d:/etc/s6-overlay/s6-rc.d/user/contents.d:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/groot/groot_engine:/app/groot_engine:ro
+      - ../../cyclo_intelligence/cyclo_brain/policy/groot/runtime:/app/runtime:ro
+      - ../../data/cyclo/zenoh_cache:/root/.cache/zenoh_ros2_sdk:rw
+      - ../../cyclo_intelligence/shared/shared/robot_configs:/orchestrator_config:ro
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+    restart: "no"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "S6_SVSTAT=$$(ls /package/admin/s6-*/command/s6-svstat 2>/dev/null | head -1); [ -n \"$$S6_SVSTAT\" ] && \"$$S6_SVSTAT\" /run/service/main-runtime | grep -q '^up ' && \"$$S6_SVSTAT\" /run/service/engine-process | grep -q '^up '",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
