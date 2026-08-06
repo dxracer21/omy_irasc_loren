@@ -45,28 +45,63 @@ compose() {
         "$@"
 }
 
+setup_x11() {
+    if command -v xhost >/dev/null 2>&1; then
+        xhost +local:root >/dev/null 2>&1 || true
+    fi
+}
+
+container_running() {
+    docker ps --format '{{.Names}}' | grep -qx "$1"
+}
+
+start_base_containers() {
+    echo "[OMY iRASC] robotis_omy와 irasc_stack 컨테이너를 빌드하고 실행합니다."
+    setup_x11
+    compose up -d --build robotis_omy irasc_omy_stack
+    compose ps
+}
+
+start_cyclo_stack() {
+    local services=()
+
+    echo "[OMY iRASC] cyclo_loren 컨테이너를 실행합니다."
+    setup_x11
+    prepare_cyclo_mounts
+
+    if ! container_running robotis_omy_loren; then
+        echo "[OMY iRASC] robotis_omy_loren이 꺼져 있어 함께 실행합니다."
+        services+=(robotis_omy)
+    fi
+
+    if ! container_running irasc_stack; then
+        echo "[OMY iRASC] irasc_stack이 꺼져 있어 함께 실행합니다."
+        services+=(irasc_omy_stack)
+    fi
+
+    services+=(cyclo_loren)
+    compose up -d --build "${services[@]}"
+    compose ps
+}
+
 case "${1:-}" in
     start)
-        echo "[OMY iRASC] robotis_omy와 irasc_stack 컨테이너를 빌드하고 실행합니다."
-
-        if command -v xhost >/dev/null 2>&1; then
-            xhost +local:root >/dev/null 2>&1 || true
-        fi
-
-        compose up -d --build robotis_omy irasc_omy_stack
-        compose ps
+        case "${2:-}" in
+            cyclo)
+                start_cyclo_stack
+                ;;
+            "")
+                start_base_containers
+                ;;
+            *)
+                echo "사용법: $0 start [cyclo]"
+                exit 1
+                ;;
+        esac
         ;;
 
     cyclo)
-        echo "[OMY iRASC] robotis_omy, irasc_stack, cyclo_loren 컨테이너를 실행합니다."
-
-        if command -v xhost >/dev/null 2>&1; then
-            xhost +local:root >/dev/null 2>&1 || true
-        fi
-
-        prepare_cyclo_mounts
-        compose up -d --build robotis_omy irasc_omy_stack cyclo_loren
-        compose ps
+        start_cyclo_stack
         ;;
 
     stop)
@@ -115,8 +150,9 @@ case "${1:-}" in
 
     *)
         echo "사용법:"
-        echo "  $0 start     robotis_omy와 irasc_stack 빌드 및 실행"
-        echo "  $0 cyclo     robotis_omy, irasc_stack, cyclo_loren 실행"
+        echo "  $0 start          robotis_omy와 irasc_stack 빌드 및 실행"
+        echo "  $0 start cyclo    cyclo_loren 실행, 필요하면 robotis/irasc도 함께 실행"
+        echo "  $0 cyclo          start cyclo와 동일"
         echo "  $0 stop      두 컨테이너 종료"
         echo "  $0 restart   robotis_omy와 irasc_stack 재시작"
         echo "  $0 build     이미지 빌드"
