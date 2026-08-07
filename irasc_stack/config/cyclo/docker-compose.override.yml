@@ -1,0 +1,23 @@
+services:
+  lerobot:
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-30}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}
+      ZENOH_ROUTER_IP: ${OMY_IP:-127.0.0.1}
+      ZENOH_ROUTER_PORT: ${ZENOH_PORT:-7447}
+      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP:-127.0.0.1}:${ZENOH_PORT:-7447}"];transport/shared_memory/enabled=true'
+    volumes:
+      - ${CYCLO_WORKSPACE_DIR:-./workspace}:/workspace
+      - ${CYCLO_HUGGINGFACE_DIR:-./huggingface}:/root/.cache/huggingface
+      - ${CYCLO_ZENOH_CACHE_DIR:-./zenoh_cache}:/root/.cache/zenoh_ros2_sdk:rw
+  groot:
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-30}
+      RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}
+      ZENOH_ROUTER_IP: ${OMY_IP:-127.0.0.1}
+      ZENOH_ROUTER_PORT: ${ZENOH_PORT:-7447}
+      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP:-127.0.0.1}:${ZENOH_PORT:-7447}"];transport/shared_memory/enabled=true'
+    volumes:
+      - ${CYCLO_WORKSPACE_DIR:-./workspace}:/workspace
+      - ${CYCLO_HUGGINGFACE_DIR:-./huggingface}:/root/.cache/huggingface
+      - ${CYCLO_ZENOH_CACHE_DIR:-./zenoh_cache}:/root/.cache/zenoh_ros2_sdk:rw

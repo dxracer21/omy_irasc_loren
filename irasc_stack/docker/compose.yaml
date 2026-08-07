@@ -95,6 +95,7 @@ services:
       CYCLO_VIDEO_SERVER_PORT: ${CYCLO_VIDEO_SERVER_PORT:-7082}
       CYCLO_WEB_VIDEO_SERVER_PORT: ${CYCLO_WEB_VIDEO_SERVER_PORT:-7085}
       CYCLO_SUPERVISOR_API_PORT: ${CYCLO_SUPERVISOR_API_PORT:-7100}
+      CYCLO_SUPERVISOR_API_CONTAINER_NAME: cyclo_loren
       INFERENCE_LOAD_TIMEOUT_SEC: ${INFERENCE_LOAD_TIMEOUT_SEC:-7200}
       PYTHONUNBUFFERED: "1"
 
@@ -105,6 +106,7 @@ services:
       - ../../data/cyclo/workspace:/workspace
       - ../../data/cyclo/huggingface:/root/.cache/huggingface
       - ../../cyclo_intelligence:/root/ros2_ws/src/cyclo_intelligence
+      - ../config/cyclo/docker-compose.override.yml:/root/ros2_ws/src/cyclo_intelligence/docker/docker-compose.override.yml:ro
       - ../config/cyclo/omy_f3m_config.yaml:/root/ros2_ws/src/cyclo_intelligence/shared/shared/robot_configs/omy_f3m_config.yaml:ro
       - ../config/cyclo/omy_f3m_config.yaml:/orchestrator_config/omy_f3m_config.yaml:ro
       - ../../cyclo_intelligence/docker/s6-services/common/ros2_service_run.sh:/usr/local/lib/s6-services/ros2_service_run.sh:ro
@@ -156,7 +158,9 @@ services:
     environment:
       RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
       ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
-      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"]'
+      ZENOH_ROUTER_IP: ${OMY_IP}
+      ZENOH_ROUTER_PORT: ${ZENOH_PORT}
+      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"];transport/shared_memory/enabled=true'
       LOAD_POLICY_TIMEOUT_S: ${LOAD_POLICY_TIMEOUT_S:-7200}
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: all
@@ -171,9 +175,9 @@ services:
       - ../../cyclo_intelligence/cyclo_brain/sdk/robot_client:/robot_client_sdk:ro
       - ../../cyclo_intelligence/cyclo_brain/sdk/action_chunk_processing:/action_chunk_processing_sdk:ro
       - ../../cyclo_intelligence/cyclo_brain/policy/common/runtime:/policy_runtime:ro
-      - ../../cyclo_intelligence/cyclo_brain/policy/common/s6-services/main-runtime:/etc/s6-overlay/s6-rc.d/main-runtime:ro
-      - ../../cyclo_intelligence/cyclo_brain/policy/common/s6-services/engine-process:/etc/s6-overlay/s6-rc.d/engine-process:ro
-      - ../../cyclo_intelligence/cyclo_brain/policy/common/s6-services/user/contents.d:/etc/s6-overlay/s6-rc.d/user/contents.d:ro
+      - ../config/cyclo/s6-services/main-runtime:/etc/s6-overlay/s6-rc.d/main-runtime:ro
+      - ../config/cyclo/s6-services/engine-process:/etc/s6-overlay/s6-rc.d/engine-process:ro
+      - ../config/cyclo/s6-services/user/contents.d:/etc/s6-overlay/s6-rc.d/user/contents.d:ro
       - ../../cyclo_intelligence/cyclo_brain/policy/lerobot/lerobot_engine:/app/lerobot_engine:ro
       - ../../data/cyclo/zenoh_cache:/root/.cache/zenoh_ros2_sdk:rw
       - ../../cyclo_intelligence/shared/shared/robot_configs:/orchestrator_config:ro
@@ -219,7 +223,9 @@ services:
     environment:
       RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
       ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
-      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"]'
+      ZENOH_ROUTER_IP: ${OMY_IP}
+      ZENOH_ROUTER_PORT: ${ZENOH_PORT}
+      ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"];transport/shared_memory/enabled=true'
       LOAD_POLICY_TIMEOUT_S: ${LOAD_POLICY_TIMEOUT_S:-7200}
       CMD_VEL_LINEAR_DEADBAND: 0.02
       CMD_VEL_ANGULAR_DEADBAND: 0.02
@@ -236,9 +242,9 @@ services:
       - ../../cyclo_intelligence/cyclo_brain/sdk/robot_client:/robot_client_sdk:ro
       - ../../cyclo_intelligence/cyclo_brain/sdk/action_chunk_processing:/action_chunk_processing_sdk:ro
       - ../../cyclo_intelligence/cyclo_brain/policy/common/runtime:/policy_runtime:ro
-      - ../../cyclo_intelligence/cyclo_brain/policy/groot/s6-services/main-runtime:/etc/s6-overlay/s6-rc.d/main-runtime:ro
-      - ../../cyclo_intelligence/cyclo_brain/policy/groot/s6-services/engine-process:/etc/s6-overlay/s6-rc.d/engine-process:ro
-      - ../../cyclo_intelligence/cyclo_brain/policy/groot/s6-services/user/contents.d:/etc/s6-overlay/s6-rc.d/user/contents.d:ro
+      - ../config/cyclo/s6-services/main-runtime:/etc/s6-overlay/s6-rc.d/main-runtime:ro
+      - ../config/cyclo/s6-services/engine-process:/etc/s6-overlay/s6-rc.d/engine-process:ro
+      - ../config/cyclo/s6-services/user/contents.d:/etc/s6-overlay/s6-rc.d/user/contents.d:ro
       - ../../cyclo_intelligence/cyclo_brain/policy/groot/groot_engine:/app/groot_engine:ro
       - ../../cyclo_intelligence/cyclo_brain/policy/groot/runtime:/app/runtime:ro
       - ../../data/cyclo/zenoh_cache:/root/.cache/zenoh_ros2_sdk:rw
