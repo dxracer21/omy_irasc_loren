@@ -27,11 +27,7 @@ services:
     restart: unless-stopped
 
   irasc_omy_stack:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-
-    image: omy-irasc-stack:latest
+    image: ${IRASC_STACK_IMAGE:-omy-irasc-stack:latest}
     container_name: irasc_stack
 
     network_mode: host
@@ -39,6 +35,7 @@ services:
     privileged: true
     stdin_open: true
     tty: true
+    runtime: nvidia
 
     environment:
       RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
@@ -46,11 +43,15 @@ services:
       ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"]'
       DISPLAY: ${DISPLAY}
       QT_X11_NO_MITSHM: "1"
+      NVIDIA_VISIBLE_DEVICES: all
+      NVIDIA_DRIVER_CAPABILITIES: all
 
     volumes:
       - /dev:/dev
       - /dev/shm:/dev/shm
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ../../data/cyclo/workspace:/workspace
+      - ../../data/cyclo/huggingface:/root/.cache/huggingface
       - ../src:/root/irasc_ws/src
       - ../config:/root/irasc_ws/config
       - ../scripts:/root/irasc_ws/scripts
@@ -58,6 +59,12 @@ services:
     command: sleep infinity
 
     restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
 
   cyclo_loren:
     container_name: cyclo_loren

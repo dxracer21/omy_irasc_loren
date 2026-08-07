@@ -1,0 +1,38 @@
+cameras:
+  cam_front:
+    enabled: true
+    required: false
+    backend: usb_cam
+    auto_device_index: 0
+    topic_base: /camera/cam_front/color
+    frame_id: cam_front_color_frame
+    usb_cam:
+      framerate: 30.0
+      io_method: mmap
+      pixel_format: mjpeg2rgb
+      av_device_format: YUV422P
+      image_width: 640
+      image_height: 480
+      camera_name: cam_front
+      camera_info_url: package://usb_cam/config/camera_info.yaml
+      brightness: -1
+      contrast: -1
+      saturation: -1
+      sharpness: -1
+      gain: -1
+      auto_white_balance: true
+      white_balance: 4000
+      autoexposure: true
+      exposure: 100
+      autofocus: false
+      focus: -1
+
+  cam_wrist:
+    enabled: true
+    backend: realsense2_camera
+    serial_no: "335122273204"
+    realsense2_camera:
+      camera_name: cam_wrist
+      camera_namespace: camera
+      depth_module.depth_profile: "480,270,15"
+      depth_module.color_profile: "424,240,15"

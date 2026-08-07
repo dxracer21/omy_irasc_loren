@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>irasc_usb_cam</name>
+  <version>0.0.1</version>
+  <description>USB camera bringup for the OMY iRASC stack.</description>
+  <maintainer email="jinsoo@example.com">jinsoo</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>usb_cam</exec_depend>
+  <exec_depend>open_manipulator_bringup</exec_depend>
+  <exec_depend>realsense2_camera</exec_depend>
+  <exec_depend>realsense2_camera_msgs</exec_depend>
+  <exec_depend>image_transport</exec_depend>
+  <exec_depend>compressed_image_transport</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

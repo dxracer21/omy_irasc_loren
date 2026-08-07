@@ -1,0 +1,6 @@
+services:
+  irasc_omy_stack:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ${IRASC_STACK_IMAGE:-omy-irasc-stack:latest}

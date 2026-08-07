@@ -6,6 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
 COMPOSE_FILE="${SCRIPT_DIR}/compose.yaml"
+BUILD_COMPOSE_FILE="${SCRIPT_DIR}/compose.build.yaml"
 ENV_FILE="${PROJECT_ROOT}/.env"
 PROJECT_NAME="omy_irasc_loren"
 
@@ -45,6 +46,15 @@ compose() {
         "$@"
 }
 
+compose_build() {
+    docker compose \
+        -p "${PROJECT_NAME}" \
+        --env-file "${ENV_FILE}" \
+        -f "${COMPOSE_FILE}" \
+        -f "${BUILD_COMPOSE_FILE}" \
+        "$@"
+}
+
 setup_x11() {
     if command -v xhost >/dev/null 2>&1; then
         xhost +local:root >/dev/null 2>&1 || true
@@ -55,10 +65,46 @@ container_running() {
     docker ps --format '{{.Names}}' | grep -qx "$1"
 }
 
+build_irasc_workspace() {
+    if ! container_running irasc_stack; then
+        return
+    fi
+
+    echo "[OMY iRASC] irasc_stack 워크스페이스를 빌드합니다."
+    compose exec -T irasc_omy_stack bash -lc '
+        set -e
+        source /opt/ros/jazzy/setup.bash
+        if [ -f /root/ros2_ws/install/setup.bash ]; then
+            source /root/ros2_ws/install/setup.bash
+        fi
+        cd /root/irasc_ws
+        colcon build
+        source /root/irasc_ws/install/setup.bash
+    '
+}
+
 start_base_containers() {
-    echo "[OMY iRASC] robotis_omy와 irasc_stack 컨테이너를 빌드하고 실행합니다."
+    echo "[OMY iRASC] robotis_omy와 irasc_stack 컨테이너를 실행합니다."
     setup_x11
-    compose up -d --build robotis_omy irasc_omy_stack
+    prepare_cyclo_mounts
+    compose up -d robotis_omy irasc_omy_stack
+    build_irasc_workspace
+    compose ps
+}
+
+start_robotis_container() {
+    echo "[OMY iRASC] robotis_omy 컨테이너를 실행합니다."
+    setup_x11
+    compose up -d robotis_omy
+    compose ps
+}
+
+start_irasc_container() {
+    echo "[OMY iRASC] irasc_stack 컨테이너를 실행합니다."
+    setup_x11
+    prepare_cyclo_mounts
+    compose up -d irasc_omy_stack
+    build_irasc_workspace
     compose ps
 }
 
@@ -80,13 +126,20 @@ start_cyclo_stack() {
     fi
 
     services+=(cyclo_loren)
-    compose up -d --build "${services[@]}"
+    compose up -d "${services[@]}"
+    build_irasc_workspace
     compose ps
 }
 
 case "${1:-}" in
     start)
         case "${2:-}" in
+            robotis)
+                start_robotis_container
+                ;;
+            irasc|stack)
+                start_irasc_container
+                ;;
             cyclo)
                 start_cyclo_stack
                 ;;
@@ -94,7 +147,7 @@ case "${1:-}" in
                 start_base_containers
                 ;;
             *)
-                echo "사용법: $0 start [cyclo]"
+                echo "사용법: $0 start [robotis|irasc|cyclo]"
                 exit 1
                 ;;
         esac
@@ -111,12 +164,26 @@ case "${1:-}" in
 
     restart)
         compose down
-        compose up -d --build robotis_omy irasc_omy_stack
+        compose up -d robotis_omy irasc_omy_stack
+        build_irasc_workspace
         compose ps
         ;;
 
     build)
-        compose build
+        compose_build build irasc_omy_stack
+        ;;
+
+    pull)
+        compose pull
+        ;;
+
+    push)
+        compose_build push irasc_omy_stack
+        ;;
+
+    publish)
+        compose_build build irasc_omy_stack
+        compose_build push irasc_omy_stack
         ;;
 
     enter)
@@ -150,12 +217,17 @@ case "${1:-}" in
 
     *)
         echo "사용법:"
-        echo "  $0 start          robotis_omy와 irasc_stack 빌드 및 실행"
+        echo "  $0 start          robotis_omy와 irasc_stack 실행"
+        echo "  $0 start robotis  robotis_omy만 실행"
+        echo "  $0 start irasc    irasc_stack만 실행"
         echo "  $0 start cyclo    cyclo_loren 실행, 필요하면 robotis/irasc도 함께 실행"
         echo "  $0 cyclo          start cyclo와 동일"
-        echo "  $0 stop      두 컨테이너 종료"
+        echo "  $0 stop      켜져있는 컨테이너 모두 종료"
         echo "  $0 restart   robotis_omy와 irasc_stack 재시작"
-        echo "  $0 build     이미지 빌드"
+        echo "  $0 build     irasc_stack 이미지 빌드"
+        echo "  $0 pull      compose.yaml에 적힌 이미지 pull"
+        echo "  $0 push      irasc_stack 이미지 push"
+        echo "  $0 publish   irasc_stack 이미지 build 후 push"
         echo "  $0 enter robotis   robotis_omy 접속"
         echo "  $0 enter irasc     irasc_stack 접속"
         echo "  $0 enter cyclo     cyclo_loren 접속"
