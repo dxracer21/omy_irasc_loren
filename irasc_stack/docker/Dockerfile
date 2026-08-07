@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y \
     ros-jazzy-cv-bridge \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /root/irasc_ws
+WORKDIR /root/ros2_ws
 
 ARG LEROBOT_REPO=https://github.com/huggingface/lerobot.git
 ARG LEROBOT_REF=main
@@ -42,13 +42,17 @@ RUN python3 -m venv "${LEROBOT_VENV}" && \
     python -m pip install --upgrade pip && \
     python -m pip install -e '/root/lerobot[training,smolvla]' typeguard
 
-RUN mkdir -p /root/irasc_ws/src
+RUN mkdir -p /root/ros2_ws/src/irasc
 
-COPY src/ /root/irasc_ws/src/
+COPY src/ /root/ros2_ws/src/irasc/
+
+RUN source /opt/ros/jazzy/setup.bash && \
+    if [ -f /root/ros2_ws/install/setup.bash ]; then source /root/ros2_ws/install/setup.bash; fi && \
+    cd /root/ros2_ws && \
+    colcon build --packages-select irasc_usb_cam
 
 RUN echo 'source /opt/ros/jazzy/setup.bash' >> /root/.bashrc && \
     echo 'if [ -f /root/ros2_ws/install/setup.bash ]; then source /root/ros2_ws/install/setup.bash; fi' >> /root/.bashrc && \
-    echo 'if [ -f /root/irasc_ws/install/setup.bash ]; then source /root/irasc_ws/install/setup.bash; fi' >> /root/.bashrc && \
-    echo 'alias lerobot-env="source /opt/venvs/lerobot/bin/activate"' >> /root/.bashrc
+    echo 'alias train="source /opt/venvs/lerobot/bin/activate"' >> /root/.bashrc
 
 CMD ["bash"]

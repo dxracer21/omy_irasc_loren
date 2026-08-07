@@ -67,28 +67,28 @@ container_running() {
 
 build_irasc_workspace() {
     if ! container_running irasc_stack; then
-        return
+        echo "[OMY iRASC] irasc_stack 컨테이너가 실행 중이 아닙니다."
+        exit 1
     fi
 
-    echo "[OMY iRASC] irasc_stack 워크스페이스를 빌드합니다."
+    echo "[OMY iRASC] iRASC ROS 패키지를 /root/ros2_ws에서 빌드합니다."
     compose exec -T irasc_omy_stack bash -lc '
         set -e
         source /opt/ros/jazzy/setup.bash
         if [ -f /root/ros2_ws/install/setup.bash ]; then
             source /root/ros2_ws/install/setup.bash
         fi
-        cd /root/irasc_ws
-        colcon build
-        source /root/irasc_ws/install/setup.bash
+        cd /root/ros2_ws
+        colcon build --packages-select irasc_usb_cam
+        source /root/ros2_ws/install/setup.bash
     '
 }
 
 start_base_containers() {
-    echo "[OMY iRASC] robotis_omy와 irasc_stack 컨테이너를 실행합니다."
+    echo "[OMY iRASC] irasc_stack 컨테이너를 실행합니다."
     setup_x11
     prepare_cyclo_mounts
-    compose up -d robotis_omy irasc_omy_stack
-    build_irasc_workspace
+    compose up -d irasc_omy_stack
     compose ps
 }
 
@@ -104,30 +104,14 @@ start_irasc_container() {
     setup_x11
     prepare_cyclo_mounts
     compose up -d irasc_omy_stack
-    build_irasc_workspace
     compose ps
 }
 
 start_cyclo_stack() {
-    local services=()
-
-    echo "[OMY iRASC] cyclo_loren 컨테이너를 실행합니다."
+    echo "[OMY iRASC] cyclo_loren 컨테이너만 실행합니다."
     setup_x11
     prepare_cyclo_mounts
-
-    if ! container_running robotis_omy_loren; then
-        echo "[OMY iRASC] robotis_omy_loren이 꺼져 있어 함께 실행합니다."
-        services+=(robotis_omy)
-    fi
-
-    if ! container_running irasc_stack; then
-        echo "[OMY iRASC] irasc_stack이 꺼져 있어 함께 실행합니다."
-        services+=(irasc_omy_stack)
-    fi
-
-    services+=(cyclo_loren)
-    compose up -d "${services[@]}"
-    build_irasc_workspace
+    compose up -d cyclo_loren
     compose ps
 }
 
@@ -164,13 +148,16 @@ case "${1:-}" in
 
     restart)
         compose down
-        compose up -d robotis_omy irasc_omy_stack
-        build_irasc_workspace
+        compose up -d irasc_omy_stack
         compose ps
         ;;
 
     build)
         compose_build build irasc_omy_stack
+        ;;
+
+    build-ws)
+        build_irasc_workspace
         ;;
 
     pull)
@@ -217,14 +204,15 @@ case "${1:-}" in
 
     *)
         echo "사용법:"
-        echo "  $0 start          robotis_omy와 irasc_stack 실행"
+        echo "  $0 start          irasc_stack만 실행"
         echo "  $0 start robotis  robotis_omy만 실행"
         echo "  $0 start irasc    irasc_stack만 실행"
-        echo "  $0 start cyclo    cyclo_loren 실행, 필요하면 robotis/irasc도 함께 실행"
+        echo "  $0 start cyclo    cyclo_loren만 실행"
         echo "  $0 cyclo          start cyclo와 동일"
         echo "  $0 stop      켜져있는 컨테이너 모두 종료"
-        echo "  $0 restart   robotis_omy와 irasc_stack 재시작"
+        echo "  $0 restart   irasc_stack 재시작"
         echo "  $0 build     irasc_stack 이미지 빌드"
+        echo "  $0 build-ws  실행 중인 irasc_stack에서 iRASC 패키지만 빌드"
         echo "  $0 pull      compose.yaml에 적힌 이미지 pull"
         echo "  $0 push      irasc_stack 이미지 push"
         echo "  $0 publish   irasc_stack 이미지 build 후 push"

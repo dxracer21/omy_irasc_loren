@@ -52,9 +52,9 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ../../data/cyclo/workspace:/workspace
       - ../../data/cyclo/huggingface:/root/.cache/huggingface
-      - ../src:/root/irasc_ws/src
-      - ../config:/root/irasc_ws/config
-      - ../scripts:/root/irasc_ws/scripts
+      - ../src:/root/ros2_ws/src/irasc
+      - ../config:/root/ros2_ws/config/irasc
+      - ../scripts:/root/ros2_ws/scripts/irasc
 
     command: sleep infinity
 
