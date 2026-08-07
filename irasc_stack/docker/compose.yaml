@@ -105,6 +105,8 @@ services:
       - ../../data/cyclo/workspace:/workspace
       - ../../data/cyclo/huggingface:/root/.cache/huggingface
       - ../../cyclo_intelligence:/root/ros2_ws/src/cyclo_intelligence
+      - ../config/cyclo/omy_f3m_config.yaml:/root/ros2_ws/src/cyclo_intelligence/shared/shared/robot_configs/omy_f3m_config.yaml:ro
+      - ../config/cyclo/omy_f3m_config.yaml:/orchestrator_config/omy_f3m_config.yaml:ro
       - ../../cyclo_intelligence/docker/s6-services/common/ros2_service_run.sh:/usr/local/lib/s6-services/ros2_service_run.sh:ro
       - ../config/cyclo/bashrc:/root/.bashrc:ro
       - ../../cyclo_intelligence/shared/shared/robot_configs/urdf:/usr/share/nginx/html/urdf/urdf:ro
@@ -175,6 +177,7 @@ services:
       - ../../cyclo_intelligence/cyclo_brain/policy/lerobot/lerobot_engine:/app/lerobot_engine:ro
       - ../../data/cyclo/zenoh_cache:/root/.cache/zenoh_ros2_sdk:rw
       - ../../cyclo_intelligence/shared/shared/robot_configs:/orchestrator_config:ro
+      - ../config/cyclo/omy_f3m_config.yaml:/orchestrator_config/omy_f3m_config.yaml:ro
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
 
@@ -240,6 +243,7 @@ services:
       - ../../cyclo_intelligence/cyclo_brain/policy/groot/runtime:/app/runtime:ro
       - ../../data/cyclo/zenoh_cache:/root/.cache/zenoh_ros2_sdk:rw
       - ../../cyclo_intelligence/shared/shared/robot_configs:/orchestrator_config:ro
+      - ../config/cyclo/omy_f3m_config.yaml:/orchestrator_config/omy_f3m_config.yaml:ro
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro
 
