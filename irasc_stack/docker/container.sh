@@ -22,6 +22,12 @@ ensure_dir() {
     [ -d "$1" ] || mkdir -p "$1"
 }
 
+export_cyclo_paths() {
+    export CYCLO_WORKSPACE_DIR="${PROJECT_ROOT}/data/cyclo/workspace"
+    export CYCLO_HUGGINGFACE_DIR="${PROJECT_ROOT}/data/cyclo/huggingface"
+    export CYCLO_ZENOH_CACHE_DIR="${PROJECT_ROOT}/data/cyclo/zenoh_cache"
+}
+
 prepare_cyclo_mounts() {
     ensure_dir "${PROJECT_ROOT}/data/cyclo/workspace"
     ensure_dir "${PROJECT_ROOT}/data/cyclo/workspace/dataset"
@@ -34,11 +40,14 @@ prepare_cyclo_mounts() {
     ensure_dir "${PROJECT_ROOT}/data/cyclo/zenoh_cache"
     ensure_dir "${PROJECT_ROOT}/data/cyclo/agent_sockets"
 
+    export_cyclo_paths
+
     echo "[OMY iRASC] Cyclo workspace: ${PROJECT_ROOT}/data/cyclo/workspace"
     echo "[OMY iRASC] Cyclo Hugging Face cache: ${PROJECT_ROOT}/data/cyclo/huggingface"
 }
 
 compose() {
+    export_cyclo_paths
     docker compose \
         -p "${PROJECT_NAME}" \
         --env-file "${ENV_FILE}" \
@@ -47,6 +56,7 @@ compose() {
 }
 
 compose_build() {
+    export_cyclo_paths
     docker compose \
         -p "${PROJECT_NAME}" \
         --env-file "${ENV_FILE}" \
@@ -81,6 +91,34 @@ build_irasc_workspace() {
         cd /root/ros2_ws
         colcon build --packages-select irasc_usb_cam
         source /root/ros2_ws/install/setup.bash
+    '
+}
+
+fix_lerobot_models() {
+    prepare_cyclo_mounts
+    if container_running irasc_stack; then
+        compose exec -T irasc_omy_stack bash -lc '
+            python3 /root/ros2_ws/scripts/irasc/fix_lerobot_checkpoint_configs.py                 /workspace/model/lerobot
+        '
+    else
+        python3 "${PROJECT_ROOT}/irasc_stack/scripts/fix_lerobot_checkpoint_configs.py"             "${PROJECT_ROOT}/data/cyclo/workspace/model/lerobot"
+    fi
+}
+
+test_logitech_camera() {
+    if ! container_running irasc_stack; then
+        start_irasc_container
+    fi
+
+    echo "[OMY iRASC] Logitech/front USB camera only test를 실행합니다."
+    compose exec irasc_omy_stack bash -lc '
+        set -e
+        source /opt/ros/jazzy/setup.bash
+        if [ -f /root/ros2_ws/install/setup.bash ]; then
+            source /root/ros2_ws/install/setup.bash
+        fi
+        ros2 launch irasc_usb_cam all_cameras.launch.py \
+            config:=/root/ros2_ws/src/irasc/irasc_usb_cam/config/logitech_camera.yaml
     '
 }
 
@@ -160,6 +198,14 @@ case "${1:-}" in
         build_irasc_workspace
         ;;
 
+    fix-models)
+        fix_lerobot_models
+        ;;
+
+    test-logitech-camera)
+        test_logitech_camera
+        ;;
+
     pull)
         compose pull
         ;;
@@ -213,6 +259,8 @@ case "${1:-}" in
         echo "  $0 restart   irasc_stack 재시작"
         echo "  $0 build     irasc_stack 이미지 빌드"
         echo "  $0 build-ws  실행 중인 irasc_stack에서 iRASC 패키지만 빌드"
+        echo "  $0 fix-models 학습된 LeRobot checkpoint config 정리"
+        echo "  $0 test-logitech-camera  Logitech/front USB camera만 실행"
         echo "  $0 pull      compose.yaml에 적힌 이미지 pull"
         echo "  $0 push      irasc_stack 이미지 push"
         echo "  $0 publish   irasc_stack 이미지 build 후 push"

@@ -96,6 +96,10 @@ services:
       CYCLO_WEB_VIDEO_SERVER_PORT: ${CYCLO_WEB_VIDEO_SERVER_PORT:-7085}
       CYCLO_SUPERVISOR_API_PORT: ${CYCLO_SUPERVISOR_API_PORT:-7100}
       CYCLO_SUPERVISOR_API_CONTAINER_NAME: cyclo_loren
+      WORKSPACE: /workspace
+      CYCLO_WORKSPACE_DIR: ${CYCLO_WORKSPACE_DIR}
+      CYCLO_HUGGINGFACE_DIR: ${CYCLO_HUGGINGFACE_DIR}
+      CYCLO_ZENOH_CACHE_DIR: ${CYCLO_ZENOH_CACHE_DIR}
       INFERENCE_LOAD_TIMEOUT_SEC: ${INFERENCE_LOAD_TIMEOUT_SEC:-7200}
       PYTHONUNBUFFERED: "1"
 
@@ -158,6 +162,7 @@ services:
     environment:
       RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
       ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
+      WORKSPACE: /workspace
       ZENOH_ROUTER_IP: ${OMY_IP}
       ZENOH_ROUTER_PORT: ${ZENOH_PORT}
       ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"];transport/shared_memory/enabled=true'
@@ -223,6 +228,7 @@ services:
     environment:
       RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
       ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
+      WORKSPACE: /workspace
       ZENOH_ROUTER_IP: ${OMY_IP}
       ZENOH_ROUTER_PORT: ${ZENOH_PORT}
       ZENOH_CONFIG_OVERRIDE: 'mode="client";connect/endpoints=["tcp/${OMY_IP}:${ZENOH_PORT}"];transport/shared_memory/enabled=true'
